@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:todo_flutter_esdb_example/features/todo/presentation/todo_provider.dart';
+import 'package:todo_flutter_esdb_example/features/todo/domain/repositories/todo_store.dart';
+import 'package:todo_flutter_esdb_example/features/todo/presentation/providers/todo_provider.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 
-import 'features/todo/domain/todo.dart';
+import 'features/todo/domain/entities/todo.dart';
 
 void main() {
   runApp(
@@ -11,7 +12,7 @@ void main() {
     /// can use [MyApp] while mocking the providers
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => TodoProvider()),
+        ChangeNotifierProvider(create: (_) => TodoProvider(TodoStore())),
       ],
       child: MyApp(),
     ),
@@ -51,12 +52,11 @@ class TodoListPage extends StatefulWidget {
 }
 
 class _TodoListPageState extends State<TodoListPage> {
-  void _addTodo() {
-    context.read<TodoProvider>().addTodo(Todo(
-          false,
-          'Test',
-          'Some text',
-        ));
+  void _addTodo() async {
+    final todo = await _settingModalBottomSheet();
+    if (todo != null) {
+      context.read<TodoProvider>().addTodo(todo);
+    }
   }
 
   void _completeTodo(int index) {
@@ -92,7 +92,60 @@ class _TodoListPageState extends State<TodoListPage> {
               ],
             );
           },
-          itemCount: model.count,
+          itemCount: model.total,
+        );
+      },
+    );
+  }
+
+  Future<Todo?> _settingModalBottomSheet() {
+    String title = '';
+    String description = '';
+    return showModalBottomSheet<Todo?>(
+      context: context,
+      isScrollControlled: true,
+      builder: (BuildContext bc) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setState) => Padding(
+            padding: EdgeInsets.all(24.0),
+            child: Container(
+              padding: MediaQuery.of(bc).viewInsets,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: <Widget>[
+                  TextField(
+                    autofocus: true,
+                    enableSuggestions: true,
+                    enableInteractiveSelection: true,
+                    decoration: InputDecoration(
+                      label: Text('Title'),
+                      enabledBorder: UnderlineInputBorder(),
+                    ),
+                    onChanged: (value) => setState(() => title = value),
+                  ),
+                  TextField(
+                    enableSuggestions: true,
+                    enableInteractiveSelection: true,
+                    decoration: InputDecoration(
+                      label: Text('Description'),
+                      enabledBorder: UnderlineInputBorder(),
+                    ),
+                    onChanged: (value) => setState(() => description = value),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 16.0),
+                    child: ElevatedButton(
+                      onPressed: title.isEmpty == true || description.isEmpty == true
+                          ? null
+                          : () => Navigator.pop(bc, Todo(false, title, description)),
+                      child: Text('Add Todo'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         );
       },
     );
@@ -110,7 +163,17 @@ class _TodoListPageState extends State<TodoListPage> {
       appBar: AppBar(
         // Here we take the value from the MyHomePage object that was created by
         // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
+        title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(widget.title),
+          Consumer<TodoProvider>(
+            builder: (__, model, _) {
+              return Text(
+                '${model.open} open todos',
+                style: Theme.of(context).textTheme.caption,
+              );
+            },
+          ),
+        ]),
       ),
       body: _buildListView(),
       floatingActionButton: FloatingActionButton(

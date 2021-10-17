@@ -1,10 +1,11 @@
-import 'package:flutter/foundation.dart';
-import 'package:todo_flutter_esdb_example/features/todo/domain/todo.dart';
+import 'package:todo_flutter_esdb_example/features/todo/domain/entities/todo.dart';
 
-class TodoProvider extends ChangeNotifier {
+class TodoStore {
   List<Todo> _todoList = [];
 
-  int get count => _todoList.length;
+  int get done => _todoList.where((t) => t.done).length;
+  int get open => _todoList.where((t) => !t.done).length;
+  int get total => _todoList.length;
 
   List<Todo> get todos {
     return [..._todoList];
@@ -12,15 +13,13 @@ class TodoProvider extends ChangeNotifier {
 
   set todos(List<Todo> newTodos) {
     _todoList = newTodos.toList();
-    notifyListeners();
   }
 
-  void addTodo(Todo newTodo) {
+  void add(Todo newTodo) {
     _todoList.add(newTodo);
-    notifyListeners();
   }
 
-  void completeTodo(int index) {
+  void complete(int index) {
     _todoList.replaceRange(index, index + 1, [
       Todo(
         !_todoList[index].done,
@@ -28,11 +27,9 @@ class TodoProvider extends ChangeNotifier {
         _todoList[index].description,
       )
     ]);
-    notifyListeners();
   }
 
-  void removeTodo(int index) {
+  void remove(int index) {
     _todoList.removeAt(index);
-    notifyListeners();
   }
 }
