@@ -1,4 +1,4 @@
-import 'package:todo_flutter_esdb_example/features/todo/domain/entities/todo.dart';
+import 'package:todo_flutter_esdb_demo/features/todo/domain/entities/todo.dart';
 
 class TodoStore {
   List<Todo> _todoList = [];

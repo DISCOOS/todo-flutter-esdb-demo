@@ -1,6 +1,6 @@
-# todo_flutter_esdb_example
+# todo_flutter_esdb_demo
 
-A flutter todo example app with event sourcing using EventStoreDB client.
+A flutter todo demo app with event sourcing using EventStoreDB client.
 
 ## Getting Started
 

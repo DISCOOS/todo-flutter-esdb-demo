@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
-import 'package:todo_flutter_esdb_example/features/todo/domain/entities/todo.dart';
-import 'package:todo_flutter_esdb_example/features/todo/domain/repositories/todo_store.dart';
+import 'package:todo_flutter_esdb_demo/features/todo/domain/entities/todo.dart';
+import 'package:todo_flutter_esdb_demo/features/todo/domain/repositories/todo_store.dart';
 
 class TodoProvider extends ChangeNotifier {
   final TodoStore _store;

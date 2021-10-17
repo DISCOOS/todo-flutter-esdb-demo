@@ -1,5 +1,5 @@
-name: todo_flutter_esdb_example
-description: A flutter todo example app with event sourcing using EventStoreDB client.
+name: todo_flutter_esdb_demo
+description: A flutter todo demo app with event sourcing using EventStoreDB client.
 
 # The following line prevents the package from being accidentally published to
 # pub.dev using `pub publish`. This is preferred for private packages.

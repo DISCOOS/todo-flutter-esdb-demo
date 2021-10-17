@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:todo_flutter_esdb_example/features/todo/domain/repositories/todo_store.dart';
-import 'package:todo_flutter_esdb_example/features/todo/presentation/providers/todo_provider.dart';
+import 'package:todo_flutter_esdb_demo/features/todo/domain/repositories/todo_store.dart';
+import 'package:todo_flutter_esdb_demo/features/todo/presentation/providers/todo_provider.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 
 import 'features/todo/domain/entities/todo.dart';
