@@ -5,31 +5,30 @@ import 'package:todo_flutter_esdb_demo/features/todo/domain/repositories/todo_st
 class TodoProvider extends ChangeNotifier {
   final TodoStore _store;
 
-  TodoProvider(this._store);
+  TodoProvider(this._store) {
+    _store.onReceived().forEach((e) => notifyListeners());
+  }
 
   int get open => _store.open;
+
   int get done => _store.done;
+
   int get total => _store.total;
 
   List<Todo> get todos => _store.todos;
 
-  set todos(List<Todo> newTodos) {
-    _store.todos = newTodos;
+  void create(Todo newTodo) {
+    _store.create(newTodo);
     notifyListeners();
   }
 
-  void addTodo(Todo newTodo) {
-    _store.add(newTodo);
-    notifyListeners();
-  }
-
-  void completeTodo(int index) {
+  void complete(int index) {
     _store.complete(index);
     notifyListeners();
   }
 
-  void removeTodo(int index) {
-    _store.remove(index);
+  void delete(int index) {
+    _store.delete(index);
     notifyListeners();
   }
 }

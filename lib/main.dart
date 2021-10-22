@@ -1,9 +1,11 @@
+import 'package:eventstore_client/eventstore_client.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:provider/provider.dart';
 import 'package:todo_flutter_esdb_demo/features/todo/domain/repositories/todo_store.dart';
 import 'package:todo_flutter_esdb_demo/features/todo/presentation/providers/todo_provider.dart';
-import 'package:flutter_slidable/flutter_slidable.dart';
 
+import 'features/todo/data/services/todo_service_impl.dart';
 import 'features/todo/domain/entities/todo.dart';
 
 void main() {
@@ -12,7 +14,20 @@ void main() {
     /// can use [MyApp] while mocking the providers
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => TodoProvider(TodoStore())),
+        ChangeNotifierProvider(
+          create: (_) => TodoProvider(
+            TodoStore(
+              TodoServiceImpl(
+                EventStoreStreamsClient(
+                  // Assumes that an EventStoreDB instance is running locally without security enabled
+                  EventStoreClientSettings.parse(
+                    'esdb://10.0.2.2:2113?tls=false',
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
       ],
       child: MyApp(),
     ),
@@ -55,16 +70,16 @@ class _TodoListPageState extends State<TodoListPage> {
   void _addTodo() async {
     final todo = await _settingModalBottomSheet();
     if (todo != null) {
-      context.read<TodoProvider>().addTodo(todo);
+      context.read<TodoProvider>().create(todo);
     }
   }
 
   void _completeTodo(int index) {
-    context.read<TodoProvider>().completeTodo(index);
+    context.read<TodoProvider>().complete(index);
   }
 
-  void _removeTodo(int index) {
-    context.read<TodoProvider>().removeTodo(index);
+  void _deleteTodo(int index) {
+    context.read<TodoProvider>().delete(index);
   }
 
   Widget _buildListView() {
@@ -87,7 +102,7 @@ class _TodoListPageState extends State<TodoListPage> {
                 IconSlideAction(
                   caption: 'DELETE',
                   icon: Icons.delete,
-                  onTap: () => _removeTodo(index),
+                  onTap: () => _deleteTodo(index),
                 ),
               ],
             );
@@ -136,9 +151,13 @@ class _TodoListPageState extends State<TodoListPage> {
                   Padding(
                     padding: const EdgeInsets.only(top: 16.0),
                     child: ElevatedButton(
-                      onPressed: title.isEmpty == true || description.isEmpty == true
-                          ? null
-                          : () => Navigator.pop(bc, Todo(false, title, description)),
+                      onPressed:
+                          title.isEmpty == true || description.isEmpty == true
+                              ? null
+                              : () => Navigator.pop(
+                                    bc,
+                                    Todo.from(title, description),
+                                  ),
                       child: Text('Add Todo'),
                     ),
                   ),
@@ -163,17 +182,20 @@ class _TodoListPageState extends State<TodoListPage> {
       appBar: AppBar(
         // Here we take the value from the MyHomePage object that was created by
         // the App.build method, and use it to set our appbar title.
-        title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(widget.title),
-          Consumer<TodoProvider>(
-            builder: (__, model, _) {
-              return Text(
-                '${model.open} open todos',
-                style: Theme.of(context).textTheme.caption,
-              );
-            },
-          ),
-        ]),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(widget.title),
+            Consumer<TodoProvider>(
+              builder: (__, model, _) {
+                return Text(
+                  '${model.open} open todos',
+                  style: Theme.of(context).textTheme.caption,
+                );
+              },
+            ),
+          ],
+        ),
       ),
       body: _buildListView(),
       floatingActionButton: FloatingActionButton(

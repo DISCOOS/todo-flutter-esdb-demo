@@ -5,9 +5,24 @@ part 'todo_model.g.dart';
 
 @JsonSerializable()
 class TodoModel extends Todo {
-  TodoModel(bool done, String title, String description) : super(done, title, description);
+  TodoModel(
+    String uuid,
+    bool done,
+    String title,
+    String description,
+    bool deleted,
+  ) : super(uuid, done, title, description, deleted);
 
-  factory TodoModel.fromJson(Map<String, dynamic> json) => _$TodoModelFromJson(json);
+  factory TodoModel.from(Todo todo) => TodoModel(
+        todo.uuid,
+        todo.done,
+        todo.title,
+        todo.description,
+        todo.deleted,
+      );
+
+  factory TodoModel.fromJson(Map<String, dynamic> json) =>
+      _$TodoModelFromJson(json);
 
   Map<String, dynamic> toJson() => _$TodoModelToJson(this);
 }
