@@ -40,7 +40,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Todo ESDB Demo',
+      title: 'Todo ESDB Demo (last-write-wins)',
       theme: ThemeData(
         // This is the theme of your application.
         //
