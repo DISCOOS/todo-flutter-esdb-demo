@@ -29,12 +29,20 @@ class TodoServiceImpl extends TodoService {
   }
 
   @override
+  Future<void> load() async {
+    if (isReady) {
+      await _subscription!.dispose();
+    }
+    await _subscribe();
+  }
+
+  @override
   Future<void> create(Todo todo) =>
       _append(StreamState.noStream(_toStreamId(todo)), todo, 'TodoCreated');
 
   @override
-  Future<void> complete(Todo todo) =>
-      _append(StreamState.exists(_toStreamId(todo)), todo, 'TodoCompleted');
+  Future<void> toggle(Todo todo) =>
+      _append(StreamState.exists(_toStreamId(todo)), todo, 'TodoToggled');
 
   @override
   Future<void> delete(Todo todo) =>

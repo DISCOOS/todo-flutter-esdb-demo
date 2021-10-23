@@ -17,17 +17,19 @@ class TodoProvider extends ChangeNotifier {
 
   List<Todo> get todos => _store.todos;
 
-  void create(Todo newTodo) {
+  Future<void> load() => _store.load();
+
+  Future<void> create(Todo newTodo) async {
     _store.create(newTodo);
     notifyListeners();
   }
 
-  void complete(int index) {
-    _store.complete(index);
+  Future<void> toggle(int index) async {
+    _store.toggle(index);
     notifyListeners();
   }
 
-  void delete(int index) {
+  Future<void> delete(int index) async {
     _store.delete(index);
     notifyListeners();
   }

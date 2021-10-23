@@ -28,15 +28,17 @@ class TodoStore {
     return [..._todos.values];
   }
 
+  Future<void> load() => _service.load();
+
   Future<void> create(Todo newTodo) async {
     await _service.create(newTodo);
     _todos[newTodo.uuid] = newTodo;
   }
 
-  Future<void> complete(int index) async {
+  Future<void> toggle(int index) async {
     final todo = _todos.values.toList()[index];
     final newTodo = todo.toggle();
-    await _service.complete(newTodo);
+    await _service.toggle(newTodo);
     _todos[todo.uuid] = newTodo;
   }
 

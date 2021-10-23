@@ -76,7 +76,7 @@ class _TodoListPageState extends State<TodoListPage> {
   }
 
   void _completeTodo(int index) {
-    context.read<TodoProvider>().complete(index);
+    context.read<TodoProvider>().toggle(index);
   }
 
   void _deleteTodo(int index) {
@@ -86,29 +86,32 @@ class _TodoListPageState extends State<TodoListPage> {
   Widget _buildListView() {
     return Consumer<TodoProvider>(
       builder: (__, model, _) {
-        return ListView.builder(
-          itemBuilder: (_, index) {
-            return Slidable(
-              actionPane: SlidableStrechActionPane(),
-              actionExtentRatio: 0.2,
-              child: Card(
-                child: CheckboxListTile(
-                  value: model.todos[index].done,
-                  title: Text(model.todos[index].title),
-                  subtitle: Text(model.todos[index].description),
-                  onChanged: (done) => _completeTodo(index),
+        return RefreshIndicator(
+          onRefresh: () => model.load(),
+          child: ListView.builder(
+            itemBuilder: (_, index) {
+              return Slidable(
+                actionPane: SlidableStrechActionPane(),
+                actionExtentRatio: 0.2,
+                child: Card(
+                  child: CheckboxListTile(
+                    value: model.todos[index].done,
+                    title: Text(model.todos[index].title),
+                    subtitle: Text(model.todos[index].description),
+                    onChanged: (done) => _completeTodo(index),
+                  ),
                 ),
-              ),
-              secondaryActions: <Widget>[
-                IconSlideAction(
-                  caption: 'DELETE',
-                  icon: Icons.delete,
-                  onTap: () => _deleteTodo(index),
-                ),
-              ],
-            );
-          },
-          itemCount: model.total,
+                secondaryActions: <Widget>[
+                  IconSlideAction(
+                    caption: 'DELETE',
+                    icon: Icons.delete,
+                    onTap: () => _deleteTodo(index),
+                  ),
+                ],
+              );
+            },
+            itemCount: model.total,
+          ),
         );
       },
     );
