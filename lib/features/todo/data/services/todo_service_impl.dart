@@ -13,21 +13,13 @@ class TodoServiceImpl extends TodoService {
   Stream<ResolvedEvent>? _stream;
   EventStreamSubscription? _subscription;
 
-  String toStreamId(Todo todo) => 'todos-${todo.uuid}';
+  bool get isReady => _subscription?.isCompleted != false;
 
   @override
   Stream<Todo> onReceived() async* {
-    if (_subscription == null || _subscription!.isCompleted == true) {
-      _subscription = await client.subscribeToAll(
-        filterOptions: SubscriptionFilterOptions(
-          StreamFilter.fromPrefix('todos'),
-        ),
-      );
-      if (_subscription!.isOK) {
-        _stream = _subscription!.asBroadcastStream();
-      }
+    if (!isReady) {
+      await _subscribe();
     }
-
     await for (var event in _stream!) {
       final json = jsonDecode(
         utf8.decode(event.originalEvent.data),
@@ -37,40 +29,46 @@ class TodoServiceImpl extends TodoService {
   }
 
   @override
-  Future<void> create(Todo todo) async {
-    await client.append(
-      StreamState.noStream(toStreamId(todo)),
-      Stream.fromIterable([
-        EventData(
-          type: 'TodoCreated',
-          uuid: UuidV4.newUuid().value.uuid,
-          data: utf8.encode(jsonEncode(TodoModel.from(todo).toJson())),
-        )
-      ]),
-    );
-  }
+  Future<void> create(Todo todo) =>
+      _append(StreamState.noStream(_toStreamId(todo)), todo, 'TodoCreated');
 
   @override
-  Future<void> complete(Todo todo) async {
-    await client.append(
-      StreamState.exists(toStreamId(todo)),
-      Stream.fromIterable([
-        EventData(
-          type: 'TodoCompleted',
-          uuid: UuidV4.newUuid().value.uuid,
-          data: utf8.encode(jsonEncode(TodoModel.from(todo).toJson())),
-        )
-      ]),
-    );
-  }
+  Future<void> complete(Todo todo) =>
+      _append(StreamState.exists(_toStreamId(todo)), todo, 'TodoCompleted');
 
   @override
-  Future<void> delete(Todo todo) async {
-    await client.append(
-      StreamState.exists(toStreamId(todo)),
+  Future<void> delete(Todo todo) =>
+      _append(StreamState.exists(_toStreamId(todo)), todo, 'TodoDeleted');
+
+  @override
+  Future<void> dispose() async {
+    if (isReady) {
+      await _subscription!.dispose();
+    }
+  }
+
+  String _toStreamId(Todo todo) => 'todos-${todo.uuid}';
+
+  Future<void> _subscribe() async {
+    assert(!isReady);
+    _subscription = await client.subscribeToAll(
+      filterOptions: SubscriptionFilterOptions(
+        EventTypeFilter.fromPrefixes(
+          ['TodoCreated', 'TodoCompleted'],
+        ),
+      ),
+    );
+    if (_subscription!.isOK) {
+      _stream = _subscription!.asBroadcastStream();
+    }
+  }
+
+  Future<void> _append(StreamState state, Todo todo, String eventType) {
+    return client.append(
+      state,
       Stream.fromIterable([
         EventData(
-          type: 'TodoDeleted',
+          type: eventType,
           uuid: UuidV4.newUuid().value.uuid,
           data: utf8.encode(jsonEncode(TodoModel.from(todo).toJson())),
         )

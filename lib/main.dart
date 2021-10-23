@@ -19,7 +19,8 @@ void main() {
             TodoStore(
               TodoServiceImpl(
                 EventStoreStreamsClient(
-                  // Assumes that an EventStoreDB instance is running locally without security enabled
+                  // Assumes that an EventStoreDB instance is
+                  // running locally without security enabled
                   EventStoreClientSettings.parse(
                     'esdb://10.0.2.2:2113?tls=false',
                   ),

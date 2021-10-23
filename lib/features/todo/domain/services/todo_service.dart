@@ -8,4 +8,6 @@ abstract class TodoService {
   Future<void> delete(Todo todo);
 
   Stream<Todo> onReceived();
+
+  Future<void> dispose();
 }
