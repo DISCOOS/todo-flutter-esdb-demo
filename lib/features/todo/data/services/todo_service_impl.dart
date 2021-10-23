@@ -13,7 +13,7 @@ class TodoServiceImpl extends TodoService {
   Stream<ResolvedEvent>? _stream;
   EventStreamSubscription? _subscription;
 
-  bool get isReady => _subscription?.isCompleted != false;
+  bool get isReady => _subscription?.isCompleted == false;
 
   @override
   Stream<Todo> onReceived() async* {
@@ -53,9 +53,7 @@ class TodoServiceImpl extends TodoService {
     assert(!isReady);
     _subscription = await client.subscribeToAll(
       filterOptions: SubscriptionFilterOptions(
-        EventTypeFilter.fromPrefixes(
-          ['TodoCreated', 'TodoCompleted'],
-        ),
+        StreamFilter.fromPrefix('todos'),
       ),
     );
     if (_subscription!.isOK) {
