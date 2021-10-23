@@ -75,7 +75,7 @@ class _TodoListPageState extends State<TodoListPage> {
     }
   }
 
-  void _completeTodo(int index) {
+  void toggle(int index) {
     context.read<TodoProvider>().toggle(index);
   }
 
@@ -98,7 +98,7 @@ class _TodoListPageState extends State<TodoListPage> {
                     value: model.todos[index].done,
                     title: Text(model.todos[index].title),
                     subtitle: Text(model.todos[index].description),
-                    onChanged: (done) => _completeTodo(index),
+                    onChanged: (done) => toggle(index),
                   ),
                 ),
                 secondaryActions: <Widget>[
@@ -193,7 +193,7 @@ class _TodoListPageState extends State<TodoListPage> {
             Consumer<TodoProvider>(
               builder: (__, model, _) {
                 return Text(
-                  '${model.open} open todos',
+                  '${model.open} open todos (${model.deleted} deleted)',
                   style: Theme.of(context).textTheme.caption,
                 );
               },
