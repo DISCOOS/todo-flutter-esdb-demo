@@ -6,7 +6,12 @@ import 'package:todo_flutter_esdb_demo/features/todo/domain/repositories/todo_st
 
 class TodoProvider extends ChangeNotifier {
   TodoProvider(this._store) {
-    _store.onReceived().forEach((e) => notifyListeners());
+    _store.onReceived().forEach((e) {
+      if (_store.modifications > _seen) {
+        _seen = _store.modifications;
+        notifyListeners();
+      }
+    });
   }
 
   final TodoStore _store;
@@ -20,6 +25,7 @@ class TodoProvider extends ChangeNotifier {
 
   Duration get duration => _store.duration;
   int get modifications => _store.modifications;
+  int _seen = 0;
 
   Future<void> load() => _store.load();
 
