@@ -32,12 +32,20 @@ class TodoServiceImpl extends TodoService {
       _append(StreamState.noStream(_toStreamId(todo)), todo, 'TodoCreated');
 
   @override
-  Future<void> toggle(Todo todo) =>
-      _append(StreamState.exists(_toStreamId(todo)), todo, 'TodoToggled');
+  Future<Todo> toggle(Todo todo) async {
+    final next = todo.toggle();
+    await _append(StreamState.exists(_toStreamId(next)), next, 'TodoToggled');
+    return next;
+  }
 
   @override
-  Future<void> delete(Todo todo) =>
-      _append(StreamState.exists(_toStreamId(todo)), todo, 'TodoDeleted');
+  Future<Todo> delete(Todo todo) async {
+    final next = todo.delete();
+    if (next != todo) {
+      await _append(StreamState.exists(_toStreamId(next)), next, 'TodoDeleted');
+    }
+    return next;
+  }
 
   @override
   Future<void> dispose() async {

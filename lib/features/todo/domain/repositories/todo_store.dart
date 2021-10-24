@@ -58,16 +58,14 @@ class TodoStore {
 
   Future<void> toggle(String uuid) async {
     final todo = _todos[uuid]!;
-    final newTodo = todo.toggle();
-    await _service.toggle(newTodo);
+    final newTodo = await _service.toggle(todo);
     _todos[todo.uuid] = newTodo;
   }
 
   Future<void> delete(String uuid) async {
     final todo = _todos[uuid]!;
-    final newTodo = todo.delete();
+    final newTodo = await _service.delete(todo);
     _todos[todo.uuid] = newTodo;
-    await _service.delete(newTodo);
   }
 
   Future<void> dispose() => _service.dispose();

@@ -7,7 +7,7 @@ import 'package:todo_flutter_esdb_demo/features/todo/domain/repositories/todo_st
 class TodoProvider extends ChangeNotifier {
   TodoProvider(this._store) {
     _store.onReceived().forEach((e) {
-      if (_store.modifications > _seen) {
+      if (_store.modifications >= _seen) {
         _seen = _store.modifications;
         notifyListeners();
       }

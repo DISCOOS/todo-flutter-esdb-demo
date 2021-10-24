@@ -5,9 +5,9 @@ abstract class TodoService {
 
   Future<void> create(Todo todo);
 
-  Future<void> toggle(Todo todo);
+  Future<Todo> toggle(Todo todo);
 
-  Future<void> delete(Todo todo);
+  Future<Todo> delete(Todo todo);
 
   Stream<Todo> onReceived();
 
