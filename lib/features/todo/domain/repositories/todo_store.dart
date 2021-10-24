@@ -19,25 +19,20 @@ class TodoStore {
   int get modifications => _modifications;
   int _modifications = 0;
 
-  Duration get duration => _duration;
-  Duration _duration = Duration.zero;
-
-  int get done => _todos.values.where((t) => t.done).length;
-  int get open => _todos.values.where((t) => t.open).length;
-  int get total => _todos.values.where((t) => !t.deleted).length;
-  int get deleted => _todos.values.where((t) => t.deleted).length;
-
-  Stream<Todo> onReceived() => _service.onReceived();
-
   List<Todo> get todos {
     return [..._todos.values.where((t) => !t.deleted)];
   }
 
-  Future<void> load() async {
-    final tic = DateTime.now();
+  Iterable<Todo> get all => _todos.values.toList();
+  Iterable<Todo> get done => _todos.values.where((t) => t.done);
+  Iterable<Todo> get open => _todos.values.where((t) => t.open);
+  Iterable<Todo> get deleted => _todos.values.where((t) => t.deleted);
+
+  Stream<Todo> onReceived() => _service.onReceived();
+
+  Future<void> load() {
     _modifications = 0;
-    await _service.load();
-    _duration = DateTime.now().difference(tic);
+    return _service.load();
   }
 
   Future<void> create(Todo newTodo) async {

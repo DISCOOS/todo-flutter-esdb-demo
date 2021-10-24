@@ -114,7 +114,7 @@ class _TodoListPageState extends State<TodoListPage> {
                 ],
               );
             },
-            itemCount: model.total,
+            itemCount: model.todos.length,
           ),
         );
       },
@@ -197,10 +197,10 @@ class _TodoListPageState extends State<TodoListPage> {
             Consumer<TodoProvider>(
               builder: (__, model, _) {
                 return Text(
-                  '${model.open} open todos '
-                  '(${model.deleted} deleted, '
-                  '${model.modifications} modifications, '
-                  'loaded in ${model.duration.inMilliseconds} ms)',
+                  '${model.open.length} open todos '
+                  '(${model.done.length} done, '
+                  '${model.deleted.length} deleted, '
+                  '${model.modifications} modifications)',
                   style: Theme.of(context).textTheme.caption,
                 );
               },

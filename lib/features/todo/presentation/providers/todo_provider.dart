@@ -16,14 +16,13 @@ class TodoProvider extends ChangeNotifier {
 
   final TodoStore _store;
 
-  int get open => _store.open;
-  int get done => _store.done;
-  int get total => _store.total;
-  int get deleted => _store.deleted;
+  Iterable<Todo> get all => _store.all;
+  Iterable<Todo> get open => _store.open;
+  Iterable<Todo> get done => _store.done;
+  Iterable<Todo> get deleted => _store.deleted;
 
   List<Todo> get todos => _store.todos;
 
-  Duration get duration => _store.duration;
   int get modifications => _store.modifications;
   int _seen = 0;
 
