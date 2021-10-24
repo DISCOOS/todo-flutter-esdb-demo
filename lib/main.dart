@@ -47,7 +47,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: TodoListPage(title: 'Todos w/last-write-wins'),
+      home: TodoListPage(title: 'Todos w/optimistic-cc'),
     );
   }
 }
