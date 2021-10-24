@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:eventstore_client/eventstore_client.dart';
@@ -9,30 +10,19 @@ class TodoServiceImpl extends TodoService {
   TodoServiceImpl(this.client);
 
   final EventStoreStreamsClient client;
+  final StreamController<Todo> _controller = StreamController.broadcast();
 
-  Stream<ResolvedEvent>? _stream;
   EventStreamSubscription? _subscription;
 
+  /// Check if service is ready for consuming events
   bool get isReady => _subscription?.isCompleted == false;
 
   @override
-  Stream<Todo> onReceived() async* {
-    if (!isReady) {
-      await _subscribe();
-    }
-    await for (var event in _stream!) {
-      final json = jsonDecode(
-        utf8.decode(event.originalEvent.data),
-      );
-      yield TodoModel.fromJson(json);
-    }
-  }
+  Stream<Todo> onReceived() => _controller.stream;
 
   @override
   Future<void> load() async {
-    if (isReady) {
-      await _subscription!.dispose();
-    }
+    await _unsubscribe();
     await _subscribe();
   }
 
@@ -50,22 +40,37 @@ class TodoServiceImpl extends TodoService {
 
   @override
   Future<void> dispose() async {
-    if (isReady) {
-      await _subscription!.dispose();
-    }
+    await _unsubscribe();
+    await _controller.close();
   }
 
   String _toStreamId(Todo todo) => 'todos-${todo.uuid}';
 
   Future<void> _subscribe() async {
     assert(!isReady);
-    _subscription = await client.subscribeToAll(
+    final subscription = await client.subscribeToAll(
       filterOptions: SubscriptionFilterOptions(
         StreamFilter.fromPrefix('todos'),
       ),
     );
-    if (_subscription!.isOK) {
-      _stream = _subscription!.asBroadcastStream();
+    _listen(subscription);
+  }
+
+  void _listen(EventStreamSubscription subscription) async {
+    if (subscription.isOK) {
+      _subscription = subscription;
+      await for (var event in subscription.stream) {
+        final json = jsonDecode(
+          utf8.decode(event.originalEvent.data),
+        );
+        _controller.add(TodoModel.fromJson(json));
+      }
+    }
+  }
+
+  Future<void> _unsubscribe() async {
+    if (isReady) {
+      await _subscription!.dispose();
     }
   }
 

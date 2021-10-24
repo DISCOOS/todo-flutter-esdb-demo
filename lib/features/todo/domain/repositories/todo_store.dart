@@ -6,13 +6,21 @@ import 'package:todo_flutter_esdb_demo/features/todo/domain/services/todo_servic
 
 class TodoStore {
   TodoStore(this._service) {
-    _listen();
+    _service.onReceived().forEach((todo) {
+      _todos[todo.uuid] = todo;
+      _modifications++;
+    });
+    load();
   }
 
   final TodoService _service;
   final Map<String, Todo> _todos = LinkedHashMap();
 
-  StreamSubscription? _subscription;
+  int get modifications => _modifications;
+  int _modifications = 0;
+
+  Duration get duration => _duration;
+  Duration _duration = Duration.zero;
 
   int get done => _todos.values.where((t) => t.done).length;
   int get open => _todos.values.where((t) => t.open).length;
@@ -26,8 +34,10 @@ class TodoStore {
   }
 
   Future<void> load() async {
+    final tic = DateTime.now();
+    _modifications = 0;
     await _service.load();
-    _listen();
+    _duration = DateTime.now().difference(tic);
   }
 
   Future<void> create(Todo newTodo) async {
@@ -49,10 +59,5 @@ class TodoStore {
     await _service.delete(newTodo);
   }
 
-  void _listen() {
-    _subscription?.cancel();
-    _subscription = _service.onReceived().listen((todo) {
-      _todos[todo.uuid] = todo;
-    });
-  }
+  Future<void> dispose() => _service.dispose();
 }

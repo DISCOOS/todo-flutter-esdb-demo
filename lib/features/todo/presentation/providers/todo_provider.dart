@@ -6,12 +6,10 @@ import 'package:todo_flutter_esdb_demo/features/todo/domain/repositories/todo_st
 
 class TodoProvider extends ChangeNotifier {
   TodoProvider(this._store) {
-    _listen();
+    _store.onReceived().forEach((e) => notifyListeners());
   }
 
   final TodoStore _store;
-
-  StreamSubscription? _subscription;
 
   int get open => _store.open;
   int get done => _store.done;
@@ -20,10 +18,10 @@ class TodoProvider extends ChangeNotifier {
 
   List<Todo> get todos => _store.todos;
 
-  Future<void> load() async {
-    await _store.load();
-    _listen();
-  }
+  Duration get duration => _store.duration;
+  int get modifications => _store.modifications;
+
+  Future<void> load() => _store.load();
 
   Future<void> create(Todo newTodo) async {
     await _store.create(newTodo);
@@ -40,8 +38,9 @@ class TodoProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _listen() {
-    _subscription?.cancel();
-    _subscription = _store.onReceived().listen((e) => notifyListeners());
+  @override
+  void dispose() async {
+    super.dispose();
+    await _store.dispose();
   }
 }

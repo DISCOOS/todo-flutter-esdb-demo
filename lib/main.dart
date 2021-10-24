@@ -193,7 +193,10 @@ class _TodoListPageState extends State<TodoListPage> {
             Consumer<TodoProvider>(
               builder: (__, model, _) {
                 return Text(
-                  '${model.open} open todos (${model.deleted} deleted)',
+                  '${model.open} open todos '
+                  '(${model.deleted} deleted, '
+                  '${model.modifications} modifications, '
+                  'loaded in ${model.duration.inMilliseconds} ms)',
                   style: Theme.of(context).textTheme.caption,
                 );
               },
