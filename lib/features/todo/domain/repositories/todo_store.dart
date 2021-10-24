@@ -20,13 +20,29 @@ class TodoStore {
   int _modifications = 0;
 
   List<Todo> get todos {
-    return [..._todos.values.where((t) => !t.deleted)];
+    return [..._todos.values.where((t) => !t.isDeleted)];
   }
 
   Iterable<Todo> get all => _todos.values.toList();
-  Iterable<Todo> get done => _todos.values.where((t) => t.done);
-  Iterable<Todo> get open => _todos.values.where((t) => t.open);
-  Iterable<Todo> get deleted => _todos.values.where((t) => t.deleted);
+  Iterable<Todo> get done => _todos.values.where((t) => t.isDone);
+  Iterable<Todo> get open => _todos.values.where((t) => t.isOpen);
+  Iterable<Todo> get deleted => _todos.values.where((t) => t.isDeleted);
+
+  Iterable<Todo> where({
+    bool open: true,
+    bool done: false,
+    bool deleted: false,
+  }) {
+    final matches = [
+      if (open) TodoState.open,
+      if (done) TodoState.done,
+      if (deleted) TodoState.deleted,
+    ];
+
+    return _todos.values.where(
+      (t) => matches.contains(t.state),
+    );
+  }
 
   Stream<Todo> onReceived() => _service.onReceived();
 
@@ -40,15 +56,15 @@ class TodoStore {
     _todos[newTodo.uuid] = newTodo;
   }
 
-  Future<void> toggle(int index) async {
-    final todo = todos[index];
+  Future<void> toggle(String uuid) async {
+    final todo = _todos[uuid]!;
     final newTodo = todo.toggle();
     await _service.toggle(newTodo);
     _todos[todo.uuid] = newTodo;
   }
 
-  Future<void> delete(int index) async {
-    final todo = todos[index];
+  Future<void> delete(String uuid) async {
+    final todo = _todos[uuid]!;
     final newTodo = todo.delete();
     _todos[todo.uuid] = newTodo;
     await _service.delete(newTodo);

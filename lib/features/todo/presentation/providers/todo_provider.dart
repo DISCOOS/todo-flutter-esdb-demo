@@ -26,6 +26,13 @@ class TodoProvider extends ChangeNotifier {
   int get modifications => _store.modifications;
   int _seen = 0;
 
+  Iterable<Todo> where({
+    bool open: true,
+    bool done: false,
+    bool deleted: false,
+  }) =>
+      _store.where(open: open, done: done, deleted: deleted);
+
   Future<void> load() => _store.load();
 
   Future<void> create(Todo newTodo) async {
@@ -33,13 +40,13 @@ class TodoProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> toggle(int index) async {
-    await _store.toggle(index);
+  Future<void> toggle(String uuid) async {
+    await _store.toggle(uuid);
     notifyListeners();
   }
 
-  Future<void> delete(int index) async {
-    await _store.delete(index);
+  Future<void> delete(String uuid) async {
+    await _store.delete(uuid);
     notifyListeners();
   }
 

@@ -7,18 +7,16 @@ part 'todo_model.g.dart';
 class TodoModel extends Todo {
   TodoModel(
     String uuid,
-    bool done,
     String title,
     String description,
-    bool deleted,
-  ) : super(uuid, done, title, description, deleted);
+    TodoState state,
+  ) : super(uuid, title, description, state);
 
   factory TodoModel.from(Todo todo) => TodoModel(
         todo.uuid,
-        todo.done,
         todo.title,
         todo.description,
-        todo.deleted,
+        todo.state,
       );
 
   factory TodoModel.fromJson(Map<String, dynamic> json) =>

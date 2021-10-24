@@ -8,16 +8,20 @@ part of 'todo_model.dart';
 
 TodoModel _$TodoModelFromJson(Map<String, dynamic> json) => TodoModel(
       json['uuid'] as String,
-      json['done'] as bool,
       json['title'] as String,
       json['description'] as String,
-      json['deleted'] as bool,
+      $enumDecode(_$TodoStateEnumMap, json['state']),
     );
 
 Map<String, dynamic> _$TodoModelToJson(TodoModel instance) => <String, dynamic>{
-      'done': instance.done,
       'uuid': instance.uuid,
       'title': instance.title,
-      'deleted': instance.deleted,
+      'state': _$TodoStateEnumMap[instance.state],
       'description': instance.description,
     };
+
+const _$TodoStateEnumMap = {
+  TodoState.open: 'open',
+  TodoState.done: 'done',
+  TodoState.deleted: 'deleted',
+};
