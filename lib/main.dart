@@ -8,7 +8,10 @@ import 'package:todo_flutter_esdb_demo/features/todo/presentation/providers/todo
 import 'features/todo/data/services/todo_service_impl.dart';
 import 'features/todo/domain/entities/todo.dart';
 
-void main() {
+void main() async {
+  // TODO: Replace with token of authenticated user
+  final userId = 'user123';
+
   runApp(
     /// Providers are above [MyApp] instead of inside it, so that tests
     /// can use [MyApp] while mocking the providers
@@ -18,6 +21,7 @@ void main() {
           create: (_) => TodoProvider(
             TodoStore(
               TodoServiceImpl(
+                userId,
                 EventStoreStreamsClient(
                   // Assumes that an EventStoreDB instance is
                   // running locally without security enabled

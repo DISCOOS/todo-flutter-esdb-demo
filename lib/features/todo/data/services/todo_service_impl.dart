@@ -7,8 +7,9 @@ import 'package:todo_flutter_esdb_demo/features/todo/domain/entities/todo.dart';
 import 'package:todo_flutter_esdb_demo/features/todo/domain/services/todo_service.dart';
 
 class TodoServiceImpl extends TodoService {
-  TodoServiceImpl(this.client);
+  TodoServiceImpl(this.userId, this.client);
 
+  final String userId;
   final EventStoreStreamsClient client;
   final StreamController<Todo> _controller = StreamController.broadcast();
 
@@ -44,13 +45,13 @@ class TodoServiceImpl extends TodoService {
     await _controller.close();
   }
 
-  String _toStreamId(Todo todo) => 'todos-${todo.uuid}';
+  String _toStreamId(Todo todo) => '$userId-todos-${todo.uuid}';
 
   Future<void> _subscribe() async {
     assert(!isReady);
     final subscription = await client.subscribeToAll(
       filterOptions: SubscriptionFilterOptions(
-        StreamFilter.fromPrefix('todos'),
+        StreamFilter.fromPrefix('$userId-todos'),
       ),
     );
     _listen(subscription);
