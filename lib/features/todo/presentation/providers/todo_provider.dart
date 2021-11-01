@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:todo_flutter_esdb_demo/core/data/connectivity_mixin.dart';
+import 'package:todo_flutter_esdb_demo/core/domain/conflict.dart';
 import 'package:todo_flutter_esdb_demo/features/todo/domain/entities/todo.dart';
 import 'package:todo_flutter_esdb_demo/features/todo/domain/repositories/todo_store.dart';
 
@@ -12,16 +14,20 @@ class TodoProvider extends ChangeNotifier {
         notifyListeners();
       }
     });
+    _store.onConflicts().forEach((e) => notifyListeners());
+    _store.onException().forEach((e) => notifyListeners());
+    _store.onConnectivityChanged().forEach((e) => notifyListeners());
   }
 
   final TodoStore _store;
+
+  ConnectivityState get state => _store.state;
 
   Iterable<Todo> get all => _store.all;
   Iterable<Todo> get open => _store.open;
   Iterable<Todo> get done => _store.done;
   Iterable<Todo> get deleted => _store.deleted;
-
-  List<Todo> get todos => _store.todos;
+  Map<String, Conflict<Todo>> get conflicts => _store.conflicts;
 
   int get modifications => _store.modifications;
   int _seen = 0;
@@ -47,6 +53,21 @@ class TodoProvider extends ChangeNotifier {
 
   Future<void> delete(String uuid) async {
     await _store.delete(uuid);
+    notifyListeners();
+  }
+
+  Future<void> reopen(String uuid) async {
+    await _store.reopen(uuid);
+    notifyListeners();
+  }
+
+  void keepYours() {
+    _store.keepYours();
+    notifyListeners();
+  }
+
+  void keepTheirs() {
+    _store.keepTheirs();
     notifyListeners();
   }
 

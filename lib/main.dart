@@ -2,11 +2,12 @@ import 'package:eventstore_client/eventstore_client.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:provider/provider.dart';
-import 'package:todo_flutter_esdb_demo/features/todo/domain/repositories/todo_store.dart';
-import 'package:todo_flutter_esdb_demo/features/todo/presentation/providers/todo_provider.dart';
 
+import 'core/data/connectivity_mixin.dart';
 import 'features/todo/data/services/todo_service_impl.dart';
 import 'features/todo/domain/entities/todo.dart';
+import 'features/todo/domain/repositories/todo_store.dart';
+import 'features/todo/presentation/providers/todo_provider.dart';
 
 void main() async {
   // TODO: Replace with token of authenticated user
@@ -22,12 +23,11 @@ void main() async {
             TodoStore(
               TodoServiceImpl(
                 userId,
-                EventStoreStreamsClient(
-                  // Assumes that an EventStoreDB instance is
-                  // running locally without security enabled
-                  EventStoreClientSettings.parse(
-                    'esdb://10.0.2.2:2113?tls=false',
-                  ),
+                // Assumes that an EventStoreDB instance is
+                // running locally without security enabled
+                EventStoreClientSettings.parse(
+                  'esdb://10.0.2.2:2113?tls=false&'
+                  'operationTimeout=5000',
                 ),
               ),
             ),
@@ -47,7 +47,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: TodoListPage(title: 'Todos w/optimistic-cc'),
+      home: TodoListPage(title: 'Todos w/offline support'),
     );
   }
 }
@@ -68,6 +68,53 @@ class _TodoListPageState extends State<TodoListPage> {
   };
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    context.read<TodoProvider>()
+      ..removeListener(_onChanged)
+      ..addListener(_onChanged);
+  }
+
+  Future<void>? _resolve;
+
+  void _onChanged() {
+    final provider = context.read<TodoProvider>();
+    if (provider.conflicts.isNotEmpty) {
+      _resolve ??= _showResolveDialog();
+    }
+  }
+
+  Future<void> _showResolveDialog() async {
+    await showGeneralDialog(
+      context: context,
+      pageBuilder: (bc, _, __) => WillPopScope(
+        onWillPop: () async => false,
+        child: AlertDialog(
+          title: Text('Resolve conflicts'),
+          content: ButtonBar(
+            children: [
+              Text('Keep'),
+              ElevatedButton(
+                  onPressed: () {
+                    context.read<TodoProvider>().keepYours();
+                    Navigator.pop(context);
+                  },
+                  child: Text('Yours')),
+              ElevatedButton(
+                  onPressed: () {
+                    context.read<TodoProvider>().keepTheirs();
+                    Navigator.pop(context);
+                  },
+                  child: Text('Theirs')),
+            ],
+          ),
+        ),
+      ),
+    );
+    _resolve = null;
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -80,8 +127,9 @@ class _TodoListPageState extends State<TodoListPage> {
                 return Text(
                   '${model.open.length} open todos '
                   '(${model.done.length} done, '
-                  '${model.deleted.length} deleted, '
-                  '${model.modifications} modifications)',
+                  '${model.conflicts.length}/'
+                  '${model.deleted.length}/'
+                  '${model.modifications})',
                   style: Theme.of(context).textTheme.caption,
                 );
               },
@@ -89,6 +137,18 @@ class _TodoListPageState extends State<TodoListPage> {
           ],
         ),
         actions: [
+          Consumer<TodoProvider>(
+            builder: (__, model, _) {
+              switch (model.state) {
+                case ConnectivityState.offline:
+                  return Icon(Icons.cloud_off);
+                case ConnectivityState.uploading:
+                  return Icon(Icons.cloud_upload);
+                case ConnectivityState.idle:
+                  return Icon(Icons.cloud_done);
+              }
+            },
+          ),
           PopupMenuButton<String>(
             onSelected: _handleClick,
             itemBuilder: (BuildContext context) {
@@ -114,7 +174,7 @@ class _TodoListPageState extends State<TodoListPage> {
   }
 
   void _createTodo() async {
-    final todo = await _settingModalBottomSheet();
+    final todo = await _promptAddTodo();
     if (todo != null) {
       context.read<TodoProvider>().create(todo);
     }
@@ -126,6 +186,10 @@ class _TodoListPageState extends State<TodoListPage> {
 
   void _deleteTodo(String uuid) {
     context.read<TodoProvider>().delete(uuid);
+  }
+
+  void _reopenTodo(String uuid) {
+    context.read<TodoProvider>().reopen(uuid);
   }
 
   Widget _buildListView() {
@@ -159,12 +223,13 @@ class _TodoListPageState extends State<TodoListPage> {
                   ),
                 ),
                 secondaryActions: <Widget>[
-                  if (!todos[index].isDeleted)
-                    IconSlideAction(
-                      caption: 'DELETE',
-                      icon: Icons.delete,
-                      onTap: () => _deleteTodo(todos[index].uuid),
-                    ),
+                  IconSlideAction(
+                    caption: todos[index].isDeleted ? 'REOPEN' : 'DELETE',
+                    icon: Icons.delete,
+                    onTap: () => todos[index].isDeleted
+                        ? _reopenTodo(todos[index].uuid)
+                        : _deleteTodo(todos[index].uuid),
+                  ),
                 ],
               );
             },
@@ -177,7 +242,7 @@ class _TodoListPageState extends State<TodoListPage> {
     );
   }
 
-  Future<Todo?> _settingModalBottomSheet() {
+  Future<Todo?> _promptAddTodo() {
     String title = '';
     String description = '';
     final isValid = () => title.isEmpty == true || description.isEmpty == true;
