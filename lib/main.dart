@@ -1,18 +1,38 @@
+import 'package:eventstore_client/eventstore_client.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:provider/provider.dart';
 import 'package:todo_flutter_esdb_demo/features/todo/domain/repositories/todo_store.dart';
 import 'package:todo_flutter_esdb_demo/features/todo/presentation/providers/todo_provider.dart';
-import 'package:flutter_slidable/flutter_slidable.dart';
 
+import 'features/todo/data/services/todo_service_impl.dart';
 import 'features/todo/domain/entities/todo.dart';
 
-void main() {
+void main() async {
+  // TODO: Replace with token of authenticated user
+  final userId = 'user123';
+
   runApp(
     /// Providers are above [MyApp] instead of inside it, so that tests
     /// can use [MyApp] while mocking the providers
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => TodoProvider(TodoStore())),
+        ChangeNotifierProvider(
+          create: (_) => TodoProvider(
+            TodoStore(
+              TodoServiceImpl(
+                userId,
+                EventStoreStreamsClient(
+                  // Assumes that an EventStoreDB instance is
+                  // running locally without security enabled
+                  EventStoreClientSettings.parse(
+                    'esdb://10.0.2.2:2113?tls=false',
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
       ],
       child: MyApp(),
     ),
@@ -20,24 +40,14 @@ void main() {
 }
 
 class MyApp extends StatelessWidget {
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Todo ESDB Demo',
+      title: 'Todo ESDB Demo',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // Try running your application with "flutter run". You'll see the
-        // application has a blue toolbar. Then, without quitting the app, try
-        // changing the primarySwatch below to Colors.green and then invoke
-        // "hot reload" (press "r" in the console where you ran "flutter run",
-        // or simply save your changes to "hot reload" in a Flutter IDE).
-        // Notice that the counter didn't reset back to zero; the application
-        // is not restarted.
         primarySwatch: Colors.blue,
       ),
-      home: TodoListPage(title: 'Todos'),
+      home: TodoListPage(title: 'Todos w/last-write-wins'),
     );
   }
 }
@@ -52,47 +62,116 @@ class TodoListPage extends StatefulWidget {
 }
 
 class _TodoListPageState extends State<TodoListPage> {
-  void _addTodo() async {
+  final _checked = <String, bool>{
+    'Done': false,
+    'Deleted': false,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(widget.title),
+            Consumer<TodoProvider>(
+              builder: (__, model, _) {
+                return Text(
+                  '${model.open.length} open todos '
+                  '(${model.done.length} done, '
+                  '${model.deleted.length} deleted, '
+                  '${model.modifications} modifications)',
+                  style: Theme.of(context).textTheme.caption,
+                );
+              },
+            ),
+          ],
+        ),
+        actions: [
+          PopupMenuButton<String>(
+            onSelected: _handleClick,
+            itemBuilder: (BuildContext context) {
+              return _checked.keys.map((String choice) {
+                return CheckedPopupMenuItem<String>(
+                  value: choice,
+                  child: Text(choice),
+                  padding: EdgeInsets.zero,
+                  checked: _checked[choice]!,
+                );
+              }).toList();
+            },
+          ),
+        ],
+      ),
+      body: _buildListView(),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _createTodo,
+        tooltip: 'Increment',
+        child: Icon(Icons.add),
+      ),
+    );
+  }
+
+  void _createTodo() async {
     final todo = await _settingModalBottomSheet();
     if (todo != null) {
-      context.read<TodoProvider>().addTodo(todo);
+      context.read<TodoProvider>().create(todo);
     }
   }
 
-  void _completeTodo(int index) {
-    context.read<TodoProvider>().completeTodo(index);
+  void _toggleTodo(String uuid) {
+    context.read<TodoProvider>().toggle(uuid);
   }
 
-  void _removeTodo(int index) {
-    context.read<TodoProvider>().removeTodo(index);
+  void _deleteTodo(String uuid) {
+    context.read<TodoProvider>().delete(uuid);
   }
 
   Widget _buildListView() {
     return Consumer<TodoProvider>(
       builder: (__, model, _) {
-        return ListView.builder(
-          itemBuilder: (_, index) {
-            return Slidable(
-              actionPane: SlidableStrechActionPane(),
-              actionExtentRatio: 0.2,
-              child: Card(
-                child: CheckboxListTile(
-                  value: model.todos[index].done,
-                  title: Text(model.todos[index].title),
-                  subtitle: Text(model.todos[index].description),
-                  onChanged: (done) => _completeTodo(index),
+        return RefreshIndicator(
+          onRefresh: () => model.load(),
+          child: ListView.builder(
+            itemBuilder: (_, index) {
+              final todos = model
+                  .where(done: _checked['Done']!, deleted: _checked['Deleted']!)
+                  .toList();
+              return Slidable(
+                actionPane: SlidableStrechActionPane(),
+                actionExtentRatio: 0.2,
+                child: Card(
+                  child: CheckboxListTile(
+                    value: todos[index].isDone,
+                    title: Text(
+                      todos[index].title,
+                      style: TextStyle(
+                        decoration: todos[index].isDone
+                            ? TextDecoration.lineThrough
+                            : TextDecoration.none,
+                      ),
+                    ),
+                    subtitle: Text(todos[index].description),
+                    onChanged: todos[index].isDeleted
+                        ? null
+                        : (done) => _toggleTodo(todos[index].uuid),
+                  ),
                 ),
-              ),
-              secondaryActions: <Widget>[
-                IconSlideAction(
-                  caption: 'DELETE',
-                  icon: Icons.delete,
-                  onTap: () => _removeTodo(index),
-                ),
-              ],
-            );
-          },
-          itemCount: model.total,
+                secondaryActions: <Widget>[
+                  if (!todos[index].isDeleted)
+                    IconSlideAction(
+                      caption: 'DELETE',
+                      icon: Icons.delete,
+                      onTap: () => _deleteTodo(todos[index].uuid),
+                    ),
+                ],
+              );
+            },
+            itemCount: model
+                .where(done: _checked['Done']!, deleted: _checked['Deleted']!)
+                .length,
+          ),
         );
       },
     );
@@ -101,6 +180,7 @@ class _TodoListPageState extends State<TodoListPage> {
   Future<Todo?> _settingModalBottomSheet() {
     String title = '';
     String description = '';
+    final isValid = () => title.isEmpty == true || description.isEmpty == true;
     return showModalBottomSheet<Todo?>(
       context: context,
       isScrollControlled: true,
@@ -136,9 +216,10 @@ class _TodoListPageState extends State<TodoListPage> {
                   Padding(
                     padding: const EdgeInsets.only(top: 16.0),
                     child: ElevatedButton(
-                      onPressed: title.isEmpty == true || description.isEmpty == true
+                      onPressed: isValid()
                           ? null
-                          : () => Navigator.pop(bc, Todo(false, title, description)),
+                          : () =>
+                              Navigator.pop(bc, Todo.from(title, description)),
                       child: Text('Add Todo'),
                     ),
                   ),
@@ -151,36 +232,9 @@ class _TodoListPageState extends State<TodoListPage> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(widget.title),
-          Consumer<TodoProvider>(
-            builder: (__, model, _) {
-              return Text(
-                '${model.open} open todos',
-                style: Theme.of(context).textTheme.caption,
-              );
-            },
-          ),
-        ]),
-      ),
-      body: _buildListView(),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _addTodo,
-        tooltip: 'Increment',
-        child: Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
-    );
+  void _handleClick(String value) {
+    setState(() {
+      _checked[value] = !_checked[value]!;
+    });
   }
 }

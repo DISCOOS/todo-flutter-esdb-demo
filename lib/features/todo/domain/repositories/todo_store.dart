@@ -1,35 +1,72 @@
+import 'dart:async';
+import 'dart:collection';
+
 import 'package:todo_flutter_esdb_demo/features/todo/domain/entities/todo.dart';
+import 'package:todo_flutter_esdb_demo/features/todo/domain/services/todo_service.dart';
 
 class TodoStore {
-  List<Todo> _todoList = [];
+  TodoStore(this._service) {
+    _service.onReceived().forEach((todo) {
+      _todos[todo.uuid] = todo;
+      _modifications++;
+    });
+    load();
+  }
 
-  int get done => _todoList.where((t) => t.done).length;
-  int get open => _todoList.where((t) => !t.done).length;
-  int get total => _todoList.length;
+  final TodoService _service;
+  final Map<String, Todo> _todos = LinkedHashMap();
+
+  int get modifications => _modifications;
+  int _modifications = 0;
 
   List<Todo> get todos {
-    return [..._todoList];
+    return [..._todos.values.where((t) => !t.isDeleted)];
   }
 
-  set todos(List<Todo> newTodos) {
-    _todoList = newTodos.toList();
+  Iterable<Todo> get all => _todos.values.toList();
+  Iterable<Todo> get done => _todos.values.where((t) => t.isDone);
+  Iterable<Todo> get open => _todos.values.where((t) => t.isOpen);
+  Iterable<Todo> get deleted => _todos.values.where((t) => t.isDeleted);
+
+  Iterable<Todo> where({
+    bool open: true,
+    bool done: false,
+    bool deleted: false,
+  }) {
+    final matches = [
+      if (open) TodoState.open,
+      if (done) TodoState.done,
+      if (deleted) TodoState.deleted,
+    ];
+
+    return _todos.values.where(
+      (t) => matches.contains(t.state),
+    );
   }
 
-  void add(Todo newTodo) {
-    _todoList.add(newTodo);
+  Stream<Todo> onReceived() => _service.onReceived();
+
+  Future<void> load() {
+    _modifications = 0;
+    return _service.load();
   }
 
-  void complete(int index) {
-    _todoList.replaceRange(index, index + 1, [
-      Todo(
-        !_todoList[index].done,
-        _todoList[index].title,
-        _todoList[index].description,
-      )
-    ]);
+  Future<void> create(Todo newTodo) async {
+    await _service.create(newTodo);
+    _todos[newTodo.uuid] = newTodo;
   }
 
-  void remove(int index) {
-    _todoList.removeAt(index);
+  Future<void> toggle(String uuid) async {
+    final todo = _todos[uuid]!;
+    final newTodo = await _service.toggle(todo);
+    _todos[todo.uuid] = newTodo;
   }
+
+  Future<void> delete(String uuid) async {
+    final todo = _todos[uuid]!;
+    final newTodo = await _service.delete(todo);
+    _todos[todo.uuid] = newTodo;
+  }
+
+  Future<void> dispose() => _service.dispose();
 }
