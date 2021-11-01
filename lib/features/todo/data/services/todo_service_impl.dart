@@ -11,6 +11,7 @@ class TodoServiceImpl extends TodoService {
 
   final String userId;
   final EventStoreStreamsClient client;
+  final Map<String, StreamPosition> _positions = {};
   final StreamController<Todo> _controller = StreamController.broadcast();
 
   EventStreamSubscription? _subscription;
@@ -29,12 +30,12 @@ class TodoServiceImpl extends TodoService {
 
   @override
   Future<void> create(Todo todo) =>
-      _append(StreamState.noStream(_toStreamId(todo)), todo, 'TodoCreated');
+      _append(_toStreamState(todo), todo, 'TodoCreated');
 
   @override
   Future<Todo> toggle(Todo todo) async {
     final next = todo.toggle();
-    await _append(StreamState.exists(_toStreamId(next)), next, 'TodoToggled');
+    await _append(_toStreamState(next), next, 'TodoToggled');
     return next;
   }
 
@@ -42,7 +43,7 @@ class TodoServiceImpl extends TodoService {
   Future<Todo> delete(Todo todo) async {
     final next = todo.delete();
     if (next != todo) {
-      await _append(StreamState.exists(_toStreamId(next)), next, 'TodoDeleted');
+      await _append(_toStreamState(next), next, 'TodoDeleted');
     }
     return next;
   }
@@ -51,6 +52,16 @@ class TodoServiceImpl extends TodoService {
   Future<void> dispose() async {
     await _unsubscribe();
     await _controller.close();
+  }
+
+  StreamState _toStreamState(Todo todo) {
+    final position = _positions[todo.uuid];
+    return position == null
+        ? StreamState.noStream(_toStreamId(todo))
+        : StreamState.exists(
+            _toStreamId(todo),
+            revision: position.toRevision(),
+          );
   }
 
   String _toStreamId(Todo todo) => '$userId-todos-${todo.uuid}';
@@ -72,7 +83,9 @@ class TodoServiceImpl extends TodoService {
         final json = jsonDecode(
           utf8.decode(event.originalEvent.data),
         );
-        _controller.add(TodoModel.fromJson(json));
+        final todo = TodoModel.fromJson(json);
+        _positions[todo.uuid] = event.originalEventNumber;
+        _controller.add(todo);
       }
     }
   }
@@ -83,8 +96,8 @@ class TodoServiceImpl extends TodoService {
     }
   }
 
-  Future<void> _append(StreamState state, Todo todo, String eventType) {
-    return client.append(
+  Future<void> _append(StreamState state, Todo todo, String eventType) async {
+    final result = await client.append(
       state,
       Stream.fromIterable([
         EventData(
@@ -94,5 +107,13 @@ class TodoServiceImpl extends TodoService {
         )
       ]),
     );
+    if (result is WrongExpectedVersionResult) {
+      throw WrongExpectedVersionException.fromRevisions(
+        state.streamId,
+        actualStreamRevision: result.nextExpectedStreamRevision,
+        expectedStreamRevision: result.expected.revision ?? StreamRevision.none,
+      );
+    }
+    _positions[todo.uuid] = result.nextExpectedStreamRevision.toPosition();
   }
 }
