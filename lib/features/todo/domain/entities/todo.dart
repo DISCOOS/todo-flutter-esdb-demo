@@ -20,7 +20,10 @@ class Todo {
   factory Todo.from(String title, String description) =>
       Todo(UuidV4.newUuid().value.uuid, title, description, TodoState.open);
 
+  Todo open() => Todo(uuid, title, description, TodoState.open);
+  Todo done() => Todo(uuid, title, description, TodoState.done);
   Todo delete() => Todo(uuid, title, description, TodoState.deleted);
+
   Todo toggle() => isDeleted
       ? this
       : Todo(
