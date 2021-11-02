@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:eventstore_client/eventstore_client.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
@@ -26,8 +28,8 @@ void main() async {
                 // Assumes that an EventStoreDB instance is
                 // running locally without security enabled
                 EventStoreClientSettings.parse(
-                  'esdb://10.0.2.2:2113?tls=false&'
-                  'operationTimeout=5000',
+                  'esdb://${Platform.isAndroid ? '10.0.2.2' : '127.0.0.1'}:2113'
+                  '?tls=false&operationTimeout=5000',
                 ),
               ),
             ),
