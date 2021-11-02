@@ -226,16 +226,19 @@ class TodoServiceImpl extends TodoService {
           )
         ]),
       );
-      if (result is WrongExpectedVersionResult) {
+      if (result.isOK) {
+        _positions[todo.uuid] = result.nextExpectedStreamRevision.toPosition();
+      } else if (result is WrongExpectedVersionResult) {
         throw WrongExpectedVersionException.fromRevisions(
           state.streamId,
           actualStreamRevision: result.nextExpectedStreamRevision,
           expectedStreamRevision:
               result.expected.revision ?? StreamRevision.none,
         );
+      } else if (result is BatchWriteErrorResult) {
+        throw Exception(result.message);
       }
-      // updateConnectivity();
-      _positions[todo.uuid] = result.nextExpectedStreamRevision.toPosition();
+      throw StateError('Unknown error: ${result.toString()}');
     } else {
       _pending[todo] = eventType;
       _controller.add(todo);
