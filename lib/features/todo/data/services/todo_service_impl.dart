@@ -227,7 +227,6 @@ class TodoServiceImpl extends TodoService {
         ]),
       );
       if (result.isOK) {
-        updateConnectivity();
         _positions[todo.uuid] = result.nextExpectedStreamRevision.toPosition();
       } else if (result is WrongExpectedVersionResult) {
         throw WrongExpectedVersionException.fromRevisions(
