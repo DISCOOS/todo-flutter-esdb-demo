@@ -30,7 +30,7 @@ packages:
     source: hosted
     version: "2.3.0"
   async:
-    dependency: "direct overridden"
+    dependency: transitive
     description:
       name: async
       url: "https://pub.dartlang.org"
@@ -231,14 +231,14 @@ packages:
       name: eventstore_client
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "0.2.1"
+    version: "0.2.2"
   eventstore_client_test:
     dependency: "direct dev"
     description:
       name: eventstore_client_test
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "0.2.1"
+    version: "0.2.2"
   fake_async:
     dependency: transitive
     description:
